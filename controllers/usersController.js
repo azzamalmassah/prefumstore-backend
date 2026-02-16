@@ -1,6 +1,14 @@
 import User from "../models/usersModel.js";
 import AppError from "../utils/AppError.js";
 import catchAsync from "../utils/catchAsync.js";
+import {
+  getOne,
+  updateOne,
+  deleteOne,
+  createOne,
+  getAll,
+} from "./handlerFactory.js";
+
 const data = "This route is not defined yet";
 
 const fliterObj = (obj = {}, ...allowedFields) => {
@@ -10,24 +18,18 @@ const fliterObj = (obj = {}, ...allowedFields) => {
   });
   return allowedData;
 };
-export const getAllUsers = catchAsync(async (req, res) => {
-  const users = await User.find();
-  res.status(200).json({
-    success: true,
-    length: users.length,
-    data: {
-      users,
-    },
-  });
-});
 
+export const getMe = (req, res, next) => {
+  req.params.id = req.user.id;
+  next();
+};
 export const updateMe = catchAsync(async (req, res, next) => {
   if (req.body && (req.body.password || req.body.passwordConfirm)) {
     return next(
       new AppError(
         "You can not use this route to update password please use /updateMyPassword",
-        400
-      )
+        400,
+      ),
     );
   }
   const filteredBody = fliterObj(req.body, "name", "email");
@@ -54,37 +56,15 @@ export const deleteMe = catchAsync(async (req, res, next) => {
   });
 });
 export const createUser = catchAsync(async (req, res) => {
-  res.status(200).json({
-    success: true,
-    data: {
-      data,
-    },
+  res.status(500).json({
+    success: false,
+    message: "this route is not defined please use /signup instead",
   });
 });
 
-export const deleteUser = catchAsync(async (req, res) => {
-  res.status(200).json({
-    success: true,
-    data: {
-      data,
-    },
-  });
-});
+export const deleteUser = deleteOne(User);
+export const getUser = getOne(User);
+export const getAllUsers = getAll(User);
 
-export const updateUser = catchAsync(async (req, res) => {
-  res.status(200).json({
-    success: true,
-    data: {
-      data,
-    },
-  });
-});
-
-export const getUser = catchAsync(async (req, res) => {
-  res.status(200).json({
-    success: true,
-    data: {
-      data,
-    },
-  });
-});
+// Do NOT update passwords and role with this!
+export const updateUser = updateOne(User);
