@@ -1,6 +1,5 @@
 import express from "express";
 import reviewRouter from "./reviewsRoutes.js";
-import { createReview } from "../controllers/reviewsController.js";
 import {
   aliasTopTours,
   createItem,

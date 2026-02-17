@@ -1,6 +1,5 @@
 import mongoose from "mongoose";
-import ITEMS from "./itemsModel.js";
-
+import Item from "./itemsModel.js";
 const reviewSchema = new mongoose.Schema(
   {
     review: { type: String, required: [true, "please write your review"] },
@@ -24,6 +23,7 @@ const reviewSchema = new mongoose.Schema(
   },
   { timestamps: true },
 );
+reviewSchema.index({ tour: 1, user: 1 }, { unique: true });
 
 reviewSchema.pre(/^find/, function (next) {
   this.populate({
@@ -34,6 +34,47 @@ reviewSchema.pre(/^find/, function (next) {
     select: "name brand",
   });
   next();
+});
+
+reviewSchema.statics.calcRating = async function (itemId) {
+  const stats = await this.aggregate([
+    {
+      $match: { item: itemId },
+    },
+    {
+      $group: {
+        _id: "$item",
+        nRating: { $sum: 1 },
+        avgRating: { $avg: "$rating" },
+      },
+    },
+  ]);
+  console.log(stats);
+
+  if (stats.length > 0) {
+    await Item.findByIdAndUpdate(itemId, {
+      ratingsQuantity: stats[0].nRating,
+      rating: stats[0].avgRating,
+    });
+  } else {
+    await Item.findByIdAndUpdate(Item, {
+      ratingsQuantity: 0,
+      rating: 4.5,
+    });
+  }
+};
+reviewSchema.post("save", function () {
+  this.constructor.calcRating(this.item);
+});
+
+reviewSchema.pre(/^findOneAnd/, async function (next) {
+  this.r = await this.findOne();
+
+  next();
+});
+
+reviewSchema.post(/^findOneAnd/, async function () {
+  await this.r.constructor.calcRating(this.r.item);
 });
 const Reviews = mongoose.model("Reviews", reviewSchema);
 
