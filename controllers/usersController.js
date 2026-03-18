@@ -5,11 +5,10 @@ import {
   getOne,
   updateOne,
   deleteOne,
-  createOne,
   getAll,
+  getPublicId,
 } from "./handlerFactory.js";
-
-const data = "This route is not defined yet";
+import { v2 as cloudinary } from "cloudinary";
 
 const fliterObj = (obj = {}, ...allowedFields) => {
   const allowedData = {};
@@ -33,7 +32,19 @@ export const updateMe = catchAsync(async (req, res, next) => {
     );
   }
   const filteredBody = fliterObj(req.body, "name", "email");
-  console.log("Filtered body:", filteredBody);
+
+  if (req.file) {
+    const currentUser = await User.findById(req.user.id);
+
+    if (
+      currentUser.photo &&
+      currentUser.photo.startsWith("https://res.cloudinary.com")
+    ) {
+      await cloudinary.uploader.destroy(getPublicId(currentUser.photo));
+    }
+
+    filteredBody.photo = req.file.path;
+  }
   const updatedUser = await User.findByIdAndUpdate(req.user.id, filteredBody, {
     new: true,
     runValidators: true,
@@ -49,7 +60,22 @@ export const updateMe = catchAsync(async (req, res, next) => {
 
 export const deleteMe = catchAsync(async (req, res, next) => {
   const user = req.user;
-  await User.findByIdAndUpdate(user._id, { active: false });
+
+  if (user.photo && user.photo.startsWith("https://res.cloudinary.com")) {
+    try {
+      const publicId = getPublicId(user.photo);
+      console.log("Attempting to delete Cloudinary ID:", publicId);
+
+      const result = await cloudinary.uploader.destroy(publicId);
+      console.log("Cloudinary Result:", result);
+    } catch (err) {
+      console.log(
+        "Cloudinary cleanup failed during account deactivation:",
+        err.message,
+      );
+    }
+  }
+  await User.findByIdAndUpdate(user._id, { active: false, photo: null });
   res.status(204).json({
     status: "success",
     data: null,

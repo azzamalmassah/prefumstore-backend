@@ -18,6 +18,8 @@ import {
   resetPassword,
   updatePassword,
 } from "../controllers/authController.js";
+import upload from "../utils/config/cloudinary.js";
+
 const router = express.Router();
 router.route("/signup").post(signup);
 router.route("/login").post(login);
@@ -30,7 +32,7 @@ router.route("/updatePassword").patch(updatePassword);
 router.get("/me", getMe, getUser);
 
 router.route("/").get(getAllUsers).post(createUser);
-router.route("/updateMe").patch(updateMe);
+router.route("/updateMe").patch(upload.single("photo"), updateMe);
 router.route("/deleteMe").delete(deleteMe);
 
 router
